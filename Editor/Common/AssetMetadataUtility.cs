@@ -119,27 +119,29 @@ public static class AssetMetadataUtility
         if (assetPath == null || string.IsNullOrEmpty(assetPath))
             return;
 
-        if (target is SceneAsset)
+        // LoadAllAssetsAtPath throws on scenes, and only native assets can hold metadata
+        if (!CanStoreMetadata(target))
+            return;
+
+        var assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+        foreach (var asset in assets)
         {
-            // calling LoadAllAssetsAtPath with a scene throws, this doesn't.
-            // Still, right now scenes do not support adding metadata so this cannot be validated further
-            foreach (var allMetadataType in AllMetadataTypes)
+            if (asset is CustomAssetMetadata additionalDataAsset)
             {
-                var additionalDataAsset = (CustomAssetMetadata)AssetDatabase.LoadAssetAtPath(assetPath, allMetadataType);
                 metadata.Add(additionalDataAsset);
             }
         }
-        else
-        {
-            var assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
-            foreach (var asset in assets)
-            {
-                if (asset is CustomAssetMetadata additionalDataAsset)
-                {
-                    metadata.Add(additionalDataAsset);
-                }
-            }
-        }
+    }
+
+    /// <summary>
+    /// Whether metadata added to <paramref name="target"/> is kept. Sub-assets added to imported assets
+    /// (textures, models, prefabs, scenes) or folders are lost on the next import.
+    /// </summary>
+    public static bool CanStoreMetadata(UnityEngine.Object target)
+    {
+        if (target == null || target is CustomAssetMetadata)
+            return false;
+        return AssetDatabase.IsNativeAsset(target);
     }
 
     public static CustomAssetMetadata Add(UnityEngine.Object target, Type type)
@@ -183,6 +185,8 @@ public static class AssetMetadataUtility
 		if (type == null) throw new NullReferenceException(nameof(type));
 		if (target == null || ReferenceEquals(target, null)) throw new NullReferenceException(nameof(target));
 		EnsureInitialized();
+        if (!CanStoreMetadata(target))
+            return false;
         if (disallowMultipleMetadataLookup.Contains(type))
         {
             if (MetadataLookup.HasMetadataOfType(target, type))

@@ -295,7 +295,7 @@ public sealed class MetadataEditor : IDisposable
                     }
                     canAddMetadata = filteredMetadata.Count > 0;
                 }
-                using (new EditorGUI.DisabledScope(!canAddMetadata))
+                if (canAddMetadata)
                 {
                     // Embed the button inside the previous rect
                     var rect = GUILayoutUtility.GetRect(0,0,0,0);

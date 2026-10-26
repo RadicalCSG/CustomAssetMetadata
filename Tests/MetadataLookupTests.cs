@@ -318,5 +318,49 @@ namespace AssetMetadata.Tests
 			Assert.That(viaLookup.OrderBy(m => m.GetEntityId()),
 						Is.EquivalentTo(viaUtility.OrderBy(m => m.GetEntityId())));
 		}
+
+		// --- assets that cannot keep metadata --------------------------------------------------
+
+		[Test]
+		public void ImportedTexture_CannotStoreMetadata()
+		{
+			var texturePath = kTestFolder + "/TestTexture.png";
+			File.WriteAllBytes(texturePath, new Texture2D(4, 4).EncodeToPNG());
+			AssetDatabase.ImportAsset(texturePath);
+			var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
+
+			Assert.That(AssetMetadataUtility.CanStoreMetadata(texture), Is.False);
+			Assert.That(AssetMetadataUtility.CanStoreMetadata(AssetImporter.GetAtPath(texturePath)), Is.False);
+			Assert.That(AssetMetadataUtility.Add<TestMetadata>(texture), Is.Null);
+		}
+
+		[Test]
+		public void Folder_CannotStoreMetadata()
+		{
+			var folder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(kTestFolder);
+			Assert.That(AssetMetadataUtility.CanStoreMetadata(folder), Is.False);
+			Assert.That(AssetMetadataUtility.Add<TestMetadata>(folder), Is.Null);
+		}
+
+		[Test]
+		public void Scene_GetAllFindsNothing()
+		{
+			var scenePath = kTestFolder + "/TestScene.unity";
+			File.WriteAllText(scenePath, "%YAML 1.1\n%TAG !u! tag:unity3d.com,2011:\n");
+			AssetDatabase.ImportAsset(scenePath);
+			var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath);
+
+			var found = new List<CustomAssetMetadata>();
+			AssetMetadataUtility.GetAll(sceneAsset, found);
+			Assert.That(found, Is.Empty);
+			Assert.That(AssetMetadataUtility.CanStoreMetadata(sceneAsset), Is.False);
+		}
+
+		[Test]
+		public void Metadata_CannotStoreMetadata()
+		{
+			var metadata = AddTestMetadata(material);
+			Assert.That(AssetMetadataUtility.CanStoreMetadata(metadata), Is.False);
+		}
 	}
 }
