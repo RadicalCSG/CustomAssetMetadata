@@ -129,6 +129,55 @@ namespace AssetMetadata.Tests
 			Assert.That(material.HasMetadataOfType<ReloadableTestMetadata>(), Is.True);
 		}
 
+		// --- undo ------------------------------------------------------------------------------
+
+		static bool OnDisk(string path) => File.ReadAllText(path).Contains("m_Name: " + nameof(ReloadableTestMetadata));
+		static bool Labelled(string path) => File.ReadAllText(path + ".meta").Contains(AssetMetadataUtility.kAssetLabel);
+
+		[Test]
+		public void Add_CanBeUndoneAndRedone()
+		{
+			var material = CreateMaterial();
+			var path = AssetDatabase.GetAssetPath(material);
+			Undo.ClearAll();
+			Undo.IncrementCurrentGroup();
+			material.AddMetadataOfType<ReloadableTestMetadata>();
+
+			Undo.PerformUndo();
+			Assert.That(material.HasMetadataOfType<ReloadableTestMetadata>(), Is.False);
+			Assert.That(OnDisk(path), Is.False);
+			Assert.That(Labelled(path), Is.False);
+
+			Undo.PerformRedo();
+			Assert.That(material.HasMetadataOfType<ReloadableTestMetadata>(), Is.True);
+			Assert.That(OnDisk(path), Is.True);
+			Assert.That(Labelled(path), Is.True);
+		}
+
+		[Test]
+		public void Destroy_CanBeUndoneAndRedone()
+		{
+			var material = CreateMaterial();
+			var path = AssetDatabase.GetAssetPath(material);
+			var metadata = material.AddMetadataOfType<ReloadableTestMetadata>();
+			metadata.value = 7;
+			Undo.ClearAll();
+			Undo.IncrementCurrentGroup();
+			AssetMetadataUtility.Destroy(metadata);
+
+			Undo.PerformUndo();
+			var restored = material.GetMetadataOfType<ReloadableTestMetadata>();
+			Assert.That(restored, Is.Not.Null);
+			Assert.That(restored.value, Is.EqualTo(7));
+			Assert.That(OnDisk(path), Is.True);
+			Assert.That(Labelled(path), Is.True);
+
+			Undo.PerformRedo();
+			Assert.That(material.HasMetadataOfType<ReloadableTestMetadata>(), Is.False);
+			Assert.That(OnDisk(path), Is.False);
+			Assert.That(Labelled(path), Is.False);
+		}
+
 		// --- attributes ------------------------------------------------------------------------
 
 		[Test]

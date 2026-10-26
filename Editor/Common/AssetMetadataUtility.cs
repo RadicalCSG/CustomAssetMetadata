@@ -183,6 +183,8 @@ public static class AssetMetadataUtility
             assetMetadata.reference = target;
             assetMetadata.OnReset();
 			AssetDatabase.AddObjectToAsset(assetMetadata, assetPath);
+            Undo.RegisterCreatedObjectUndo(assetMetadata, "Add " + GetDisplayName(type));
+            undoAssetPaths.Add(assetPath);
             SetMetadataLabel(assetPath, true);
             SaveAndImport(assetPath);
             // OnEnable runs before the reference is assigned, so register explicitly.
@@ -240,11 +242,36 @@ public static class AssetMetadataUtility
         // Unregister before removing the sub-asset, while its reference still resolves.
         MetadataLookup.Unregister(metadata.reference, metadata);
 
-        AssetDatabase.RemoveObjectFromAsset(metadata);
-        UnityEngine.Object.DestroyImmediate(metadata); // we need to destroy it otherwise it'll be saved to the scene
+        undoAssetPaths.Add(assetPath);
+        Undo.DestroyObjectImmediate(metadata);
         if (!AnyMetadataAtPath(assetPath))
             SetMetadataLabel(assetPath, false);
         SaveAndImport(assetPath);
+    }
+
+    // Assets whose metadata was added or removed with undo, and need saving again after an undo or redo
+    static readonly HashSet<string> undoAssetPaths = new();
+
+    [InitializeOnLoadMethod]
+    static void RegisterUndo()
+    {
+        Undo.undoRedoPerformed -= OnUndoRedo;
+        Undo.undoRedoPerformed += OnUndoRedo;
+    }
+
+    static void OnUndoRedo()
+    {
+        if (undoAssetPaths.Count == 0)
+            return;
+
+        foreach (var assetPath in undoAssetPaths)
+        {
+            if (AssetDatabase.LoadMainAssetAtPath(assetPath) == null)
+                continue;
+            SetMetadataLabel(assetPath, AnyMetadataAtPath(assetPath));
+            SaveAndImport(assetPath);
+        }
+        EditorHeaderHook.Reset();
     }
 
     static void SaveAndImport(string assetPath)

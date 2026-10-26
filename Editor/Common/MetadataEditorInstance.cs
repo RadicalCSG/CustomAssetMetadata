@@ -125,7 +125,6 @@ sealed class MetadataEditorInstance : IDisposable
     {
         var rect = GUILayoutUtility.GetRect(GUIContent.none, InspectorLayout.InspectorTitlebar);
         showMetadata = InspectorLayout.FoldoutTitlebar(rect, showMetadata, metadataContent, false, InspectorLayout.InspectorTitlebar, InspectorLayout.InspectorTitlebarText);
-        var controlId = InspectorLayout.LastControlId;
         if (showMetadata)
         {
             if (MixedValues)
@@ -146,19 +145,12 @@ sealed class MetadataEditorInstance : IDisposable
         }
 
         var evt = Event.current;
-        var type = evt.GetTypeForControl(controlId);
-        switch (type)
+        if (evt.type == EventType.ContextClick && rect.Contains(evt.mousePosition))
         {
-            case EventType.MouseUp:
-            {
-                if (evt.button == 1 && rect.Contains(evt.mousePosition))
-                {
-                    var menu = new GenericMenu();
-                    menu.AddItem(new GUIContent("Remove"), false, DestroyMetadata);
-                    menu.ShowAsContext();
-                }
-                break;
-            }
+            var menu = new GenericMenu();
+            menu.AddItem(new GUIContent("Remove"), false, DestroyMetadata);
+            menu.ShowAsContext();
+            evt.Use();
         }
     }
 

@@ -44,6 +44,14 @@ static class EditorHeaderHook
 
     internal static bool IsCached(Editor editor) => _targetsCache.ContainsKey(editor);
 
+    // Metadata may have come or gone without the inspector changing
+    internal static void Reset()
+    {
+        foreach (var pair in _targetsCache)
+            pair.Value.editor.Dispose();
+        _targetsCache.Clear();
+    }
+
     internal static MetadataEditor GetMetadataEditor(Editor editor)
     {
         if (_targetsCache.TryGetValue(editor, out var cache) == false || Equality(cache.targets, editor.targets) == false)
