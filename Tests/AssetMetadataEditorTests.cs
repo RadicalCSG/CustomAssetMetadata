@@ -67,9 +67,9 @@ namespace AssetMetadata.Tests
 			MetadataLookup.Clear();
 		}
 
-		static Material CreateMaterial(string name = "TestMaterial")
+		static Material CreateMaterial(string name = "TestMaterial", string folder = kTestFolder)
 		{
-			var path = AssetDatabase.GenerateUniqueAssetPath(kTestFolder + "/" + name + ".mat");
+			var path = AssetDatabase.GenerateUniqueAssetPath(folder + "/" + name + ".mat");
 			var shader = Shader.Find("Unlit/Texture") ?? Shader.Find("Standard");
 			AssetDatabase.CreateAsset(new Material(shader), path);
 			return AssetDatabase.LoadAssetAtPath<Material>(path);
@@ -169,16 +169,67 @@ namespace AssetMetadata.Tests
 
 		const string kBuildResourcesPath = "Assets/Resources/" + MetadataLookup.kResourcePath;
 
+		static Material CreateBuiltMaterial()
+		{
+			var folder = kTestFolder + "/Resources";
+			if (!AssetDatabase.IsValidFolder(folder))
+				AssetDatabase.CreateFolder(kTestFolder, "Resources");
+			return CreateMaterial("Built", folder);
+		}
+
+		static MetadataLookupAsset LoadBuildLookup()
+		{
+			return AssetDatabase.LoadAssetAtPath<MetadataLookupAsset>($"{kBuildResourcesPath}/{MetadataLookup.kAssetName}.asset");
+		}
+
+		[Test]
+		public void Build_OnlyCopiesMetadataOfAssetsTheBuildIncludes()
+		{
+			var built = CreateBuiltMaterial();
+			var notBuilt = CreateMaterial("NotBuilt");
+			built.AddMetadataOfType<ReloadableTestMetadata>();
+			notBuilt.AddMetadataOfType<ReloadableTestMetadata>();
+			try
+			{
+				MetadataLookupPreprocessBuild.BuildScenes = new string[0];
+				new MetadataLookupPreprocessBuild().OnPreprocessBuild(null);
+				var copiedFor = LoadBuildLookup().allMetadata.Select(m => m.reference.entityId).ToArray();
+				Assert.That(copiedFor, Has.Member(built.GetEntityId()));
+				Assert.That(copiedFor, Has.No.Member(notBuilt.GetEntityId()));
+				Assert.That(MetadataLookupPreprocessBuild.BuildScenes, Is.Null, "the scenes of one build must not leak into the next");
+			}
+			finally
+			{
+				MetadataLookupPreprocessBuild.RemoveBuildResources();
+			}
+		}
+
+		[Test]
+		public void BuiltAssetPaths_FollowsDependencies()
+		{
+			var material = CreateMaterial("Referenced");
+			var prefabFolder = kTestFolder + "/Resources";
+			AssetDatabase.CreateFolder(kTestFolder, "Resources");
+			var go = new GameObject("Referencing");
+			go.AddComponent<MeshRenderer>().sharedMaterial = material;
+			PrefabUtility.SaveAsPrefabAsset(go, prefabFolder + "/Referencing.prefab");
+			Object.DestroyImmediate(go);
+
+			var paths = MetadataLookupPreprocessBuild.BuiltAssetPaths(new string[0]);
+			Assert.That(paths, Has.Member(AssetDatabase.GetAssetPath(material)));
+			Assert.That(paths, Has.No.Member(AssetDatabase.GetAssetPath(CreateMaterial("Unreferenced"))));
+		}
+
 		[Test]
 		public void FailedBuild_CleanupIsScheduledAndRemovesTheCopies()
 		{
-			CreateMaterial().AddMetadataOfType<ReloadableTestMetadata>();
+			CreateBuiltMaterial().AddMetadataOfType<ReloadableTestMetadata>();
 			var hadResources = AssetDatabase.IsValidFolder("Assets/Resources");
 			try
 			{
 				// A failing build never reaches the postprocess step
 				new MetadataLookupPreprocessBuild().OnPreprocessBuild(null);
-				Assert.That(AssetDatabase.IsValidFolder(kBuildResourcesPath), Is.True);
+				Assert.That(LoadBuildLookup().allMetadata, Is.Not.Empty);
 				Assert.That(EditorApplication.delayCall.GetInvocationList().Select(d => d.Method.Name),
 							Has.Member(nameof(MetadataLookupPreprocessBuild.RemoveBuildResources)));
 			}
@@ -194,11 +245,12 @@ namespace AssetMetadata.Tests
 		[Test]
 		public void LeftoverBuildCopies_AreNotFoundAsMetadata()
 		{
-			var material = CreateMaterial();
+			var material = CreateBuiltMaterial();
 			material.AddMetadataOfType<ReloadableTestMetadata>();
 			try
 			{
 				new MetadataLookupPreprocessBuild().OnPreprocessBuild(null);
+				Assert.That(LoadBuildLookup().allMetadata, Is.Not.Empty);
 				MetadataLookupPreprocessBuild.RemoveBuildResources();
 				MetadataLookup.Clear();
 				Assert.That(MetadataLookup.GetAllMetadata(material).Count, Is.EqualTo(1));

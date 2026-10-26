@@ -217,6 +217,11 @@ namespace AssetMetadata.Tests
 		[Test]
 		public void Build_CreatesPersistentLookupAsset()
 		{
+			// Only assets the build includes get their metadata copied, and Resources is always included
+			AssetDatabase.CreateFolder(kTestFolder, "Resources");
+			var resourcesPath = kTestFolder + "/Resources/BuiltMaterial.mat";
+			Assert.That(AssetDatabase.MoveAsset(materialPath, resourcesPath), Is.Empty);
+			material = AssetDatabase.LoadAssetAtPath<Material>(resourcesPath);
 			AddTestMetadata(material, 3);
 			AssetDatabase.SaveAssets();
 

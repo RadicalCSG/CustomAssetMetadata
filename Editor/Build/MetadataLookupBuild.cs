@@ -1,19 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
 
+// Remembers which scenes a build is for; the preprocess step is not told
+public class MetadataLookupPrepareBuild : BuildPlayerProcessor
+{
+    public override int callbackOrder => 0;
+
+    public override void PrepareForBuild(BuildPlayerContext buildPlayerContext)
+    {
+        MetadataLookupPreprocessBuild.BuildScenes = buildPlayerContext.BuildPlayerOptions.scenes;
+    }
+}
+
 // This is a bit of a hack, but we need to ensure that our metadata is not stripped on build,
 // so at build time we clone them into a temporary resources directory. Cloning works since 
 // each metadata object holds a reference to the thing it belongs to and we can just use the 
 // clone at runtime instead. After we've created the build we delete the directory.
+// Only metadata of assets the build includes anyway is cloned, since a clone pulls its asset into the build.
 public class MetadataLookupPreprocessBuild : IPreprocessBuildWithReport
 {
     public int callbackOrder { get { return 0; } }
 
     public static bool HadResourcesDirectory = false;
+
+    internal static string[] BuildScenes;
 
     CustomAssetMetadata CloneCustomAssetMetadata(CustomAssetMetadata assetMetadata, string basePath, ref int index)
     {
@@ -81,8 +96,9 @@ public class MetadataLookupPreprocessBuild : IPreprocessBuildWithReport
             System.IO.Directory.CreateDirectory(kBasePath);
             var list = ScriptableObject.CreateInstance<MetadataLookupAsset>();
 
+            var builtAssets = BuiltAssetPaths(BuildScenes ?? EnabledBuildSettingsScenes());
             var allMetadata = new List<CustomAssetMetadata>();
-            allMetadata.AddRange(FindMetadata(MetadataPaths()));
+            allMetadata.AddRange(FindMetadata(MetadataPaths().Where(builtAssets.Contains)));
 
             int index = 0;
             for (int i = 0; i < allMetadata.Count; i++)
@@ -94,7 +110,33 @@ public class MetadataLookupPreprocessBuild : IPreprocessBuildWithReport
         finally
         {
             AssetDatabase.StopAssetEditing();
+            BuildScenes = null;
         }
+    }
+
+    static string[] EnabledBuildSettingsScenes()
+    {
+        return EditorBuildSettings.scenes.Where(scene => scene.enabled).Select(scene => scene.path).ToArray();
+    }
+
+    /// <summary>
+    /// Returns the asset paths a player build with these scenes includes: everything the scenes, the
+    /// Resources folders and the preloaded assets depend on.
+    /// </summary>
+    internal static HashSet<string> BuiltAssetPaths(IEnumerable<string> scenes)
+    {
+        var roots = new List<string>(scenes);
+        foreach (var path in AssetDatabase.GetAllAssetPaths())
+        {
+            if (path.Contains("/Resources/") && !path.StartsWith(kBasePath + "/"))
+                roots.Add(path);
+        }
+        foreach (var asset in PlayerSettings.GetPreloadedAssets())
+        {
+            if (asset != null)
+                roots.Add(AssetDatabase.GetAssetPath(asset));
+        }
+        return new HashSet<string>(AssetDatabase.GetDependencies(roots.ToArray(), true));
     }
 
     [InitializeOnLoadMethod]
