@@ -9,6 +9,9 @@ using System.Linq;
 
 public static class AssetMetadataUtility
 {
+	/// <summary>The label of every asset that holds metadata.</summary>
+	public const string kAssetLabel = "AssetMetadata";
+
 	static HashSet<Type> disallowMultipleMetadataLookup;
 	static Dictionary<Type, Type[]> restrictedTypesLookup;
 	static Dictionary<Type, (string displayName, string menuPath)> metadataNames;
@@ -169,6 +172,7 @@ public static class AssetMetadataUtility
             assetMetadata.reference = target;
             assetMetadata.OnReset();
 			AssetDatabase.AddObjectToAsset(assetMetadata, assetPath);
+            SetMetadataLabel(assetPath, true);
             AssetDatabase.ImportAsset(assetPath);
             AssetDatabase.Refresh();
             // OnEnable runs before the reference is assigned, so register explicitly.
@@ -228,7 +232,39 @@ public static class AssetMetadataUtility
 
         AssetDatabase.RemoveObjectFromAsset(metadata);
         UnityEngine.Object.DestroyImmediate(metadata); // we need to destroy it otherwise it'll be saved to the scene
+        if (!AnyMetadataAtPath(assetPath))
+            SetMetadataLabel(assetPath, false);
         AssetDatabase.ImportAsset(assetPath);
         AssetDatabase.Refresh();
+    }
+
+    static bool AnyMetadataAtPath(string assetPath)
+    {
+        foreach (var asset in AssetDatabase.LoadAllAssetsAtPath(assetPath))
+        {
+            if (asset is CustomAssetMetadata)
+                return true;
+        }
+        return false;
+    }
+
+    // Hidden sub-assets are invisible to AssetDatabase.FindAssets, so builds find metadata through this label
+    static void SetMetadataLabel(string assetPath, bool hasMetadata)
+    {
+        var mainAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+        if (mainAsset == null)
+            return;
+
+        var labels = AssetDatabase.GetLabels(mainAsset);
+        var index = Array.IndexOf(labels, kAssetLabel);
+        if (hasMetadata == (index != -1))
+            return;
+
+        var newLabels = new List<string>(labels);
+        if (hasMetadata)
+            newLabels.Add(kAssetLabel);
+        else
+            newLabels.RemoveAt(index);
+        AssetDatabase.SetLabels(mainAsset, newLabels.ToArray());
     }
 }

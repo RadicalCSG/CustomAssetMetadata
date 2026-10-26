@@ -3,7 +3,7 @@
     "displayName": "Custom Asset Metadata",
     "version": "1.2.3",
     "unity": "2020.3",
-    "description": "Store your own data with assets: metadata classes you write (ScriptableObjects deriving from CustomAssetMetadata) are kept with an asset, edited in its inspector, and found again from the asset at runtime as well as in the editor.\n\nMaterials are supported for now.",
+    "description": "Store your own data with assets: metadata classes you write (ScriptableObjects deriving from CustomAssetMetadata) are kept with an asset, edited in its inspector, and found again from the asset at runtime as well as in the editor.\n\nWorks with assets Unity stores in its own format: materials, ScriptableObject assets, animation clips and the like.",
     "license": "MIT",
     "author": {
         "name": "Sander van Rossen",

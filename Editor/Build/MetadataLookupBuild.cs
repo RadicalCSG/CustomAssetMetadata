@@ -24,12 +24,24 @@ public class MetadataLookupPreprocessBuild : IPreprocessBuildWithReport
     }
 
     /// <summary>Returns the asset path of every material in the project.</summary>
-    public static List<string> MaterialPaths() // TODO: support more than just materials
+    public static List<string> MaterialPaths()
     {
         var paths = new List<string>();
         foreach (var guid in AssetDatabase.FindAssets("t:Material"))
             paths.Add(AssetDatabase.GUIDToAssetPath(guid));
         return paths;
+    }
+
+    /// <summary>
+    /// Returns the asset paths that can hold metadata: every labelled asset, plus every material
+    /// since materials were given metadata before assets were labelled.
+    /// </summary>
+    public static List<string> MetadataPaths()
+    {
+        var paths = new HashSet<string>(MaterialPaths());
+        foreach (var guid in AssetDatabase.FindAssets("l:" + AssetMetadataUtility.kAssetLabel))
+            paths.Add(AssetDatabase.GUIDToAssetPath(guid));
+        return new List<string>(paths);
     }
 
     /// <summary>Returns all metadata sub-assets stored at the supplied asset paths.</summary>
@@ -60,7 +72,7 @@ public class MetadataLookupPreprocessBuild : IPreprocessBuildWithReport
             var list = ScriptableObject.CreateInstance<MetadataLookupAsset>();
 
             var allMetadata = new List<CustomAssetMetadata>();
-            allMetadata.AddRange(FindMetadata(MaterialPaths()));
+            allMetadata.AddRange(FindMetadata(MetadataPaths()));
 
             int index = 0;
             for (int i = 0; i < allMetadata.Count; i++)

@@ -356,6 +356,57 @@ namespace AssetMetadata.Tests
 			Assert.That(AssetMetadataUtility.CanStoreMetadata(sceneAsset), Is.False);
 		}
 
+		// --- other native assets and the build label -------------------------------------------
+
+		AnimationClip CreateClip()
+		{
+			var clipPath = AssetDatabase.GenerateUniqueAssetPath(kTestFolder + "/TestClip.anim");
+			AssetDatabase.CreateAsset(new AnimationClip(), clipPath);
+			return AssetDatabase.LoadAssetAtPath<AnimationClip>(clipPath);
+		}
+
+		[Test]
+		public void AnimationClip_KeepsMetadataAcrossImport()
+		{
+			var clip = CreateClip();
+			var clipPath = AssetDatabase.GetAssetPath(clip);
+			var metadata = clip.AddMetadataOfType<ReloadableTestMetadata>();
+			Assert.That(metadata, Is.Not.Null);
+
+			AssetDatabase.ImportAsset(clipPath, ImportAssetOptions.ForceUpdate);
+			MetadataLookup.Clear();
+
+			Assert.That(clip.HasMetadataOfType<ReloadableTestMetadata>(), Is.True);
+			Assert.That(clip.GetMetadataOfType<ReloadableTestMetadata>(), Is.Not.Null);
+		}
+
+		[Test]
+		public void AddedMetadata_LabelsTheAsset_AndRemovingTheLastClearsIt()
+		{
+			var first  = AddTestMetadata(material);
+			var second = AssetMetadataUtility.Add<OtherTestMetadata>(material);
+			Assert.That(AssetDatabase.GetLabels(material), Has.Member(AssetMetadataUtility.kAssetLabel));
+
+			AssetMetadataUtility.Destroy(first);
+			Assert.That(AssetDatabase.GetLabels(material), Has.Member(AssetMetadataUtility.kAssetLabel));
+
+			AssetMetadataUtility.Destroy(second);
+			Assert.That(AssetDatabase.GetLabels(material), Has.No.Member(AssetMetadataUtility.kAssetLabel));
+		}
+
+		[Test]
+		public void Build_FindsMetadataOnLabelledAssets()
+		{
+			var clip = CreateClip();
+			var clipPath = AssetDatabase.GetAssetPath(clip);
+			var metadata = AssetMetadataUtility.Add<ReloadableTestMetadata>(clip);
+
+			var paths = MetadataLookupPreprocessBuild.MetadataPaths();
+			Assert.That(paths, Has.Member(clipPath));
+			Assert.That(paths, Has.Member(materialPath), "unlabelled materials must still be searched");
+			Assert.That(MetadataLookupPreprocessBuild.FindMetadata(new[] { clipPath }), Has.Member(metadata));
+		}
+
 		[Test]
 		public void Metadata_CannotStoreMetadata()
 		{

@@ -2,7 +2,7 @@
 
 A package which adds the ability to add metadata to assets(*) in Unity
 
-(*) currently only Material is supported
+(*) any asset Unity stores in its own format, such as materials, ScriptableObject assets and animation clips. Imported assets (textures, models), prefabs, scenes and folders cannot hold metadata.
 
 ![image](https://github.com/LogicalError/CustomAssetMetadata/assets/157976/bbdb5af7-96ae-4b95-87fa-2c4a6947cdcc)
 

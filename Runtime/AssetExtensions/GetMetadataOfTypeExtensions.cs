@@ -8,7 +8,7 @@ using UnityEngine;
 public static class GetMetadataOfTypeExtensions
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static Metadata GetMetadataOfType<Metadata>(this Material asset)
+    public static Metadata GetMetadataOfType<Metadata>(this UnityEngine.Object asset)
         where Metadata : CustomAssetMetadata
     {
         return MetadataLookup.GetMetadataOfType<Metadata>(asset);
