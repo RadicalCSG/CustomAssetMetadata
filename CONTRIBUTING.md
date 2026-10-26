@@ -26,4 +26,4 @@ A fix comes with a test that fails without it. Metadata classes used by tests ne
 - Run the tests on Unity 6000.3, the oldest version the package supports, and on the newest version you have.
 - Keep code comments short, and in plain ASCII.
 
-Pull requests are merged with a merge commit, never squashed, so your commits stay in the history.
+Pull requests are squash-merged into a single commit, which keeps you as its author.
