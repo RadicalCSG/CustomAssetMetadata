@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+- Metadata title bars look and work like those of components: a foldout arrow, an icon, and a menu with Remove; the fields are indented under them
+- When an asset has metadata, its own inspector gets a title bar too
+
 ## 1.3.0 (2026-10-26)
 - Metadata on any asset Unity stores in its own format, not only materials; the add button is in the inspector header (thanks to Eideren)
 - Assets holding metadata get the "AssetMetadata" label, which builds use to find their metadata

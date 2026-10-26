@@ -2,7 +2,7 @@
 
 Store your own data with Unity assets. You write metadata classes, add them to an asset in its inspector, and look them up from that asset in the editor and at runtime.
 
-![A material's inspector with Surface metadata under its header](Documentation~/inspector.png)
+![A material's inspector with Footsteps and Surface metadata under its header](Documentation~/inspector.png)
 
 Metadata is stored inside the asset file, so it can only be added to assets Unity stores in its own format: materials, ScriptableObject assets, animation clips, render textures and the like. Imported assets (textures, models, audio), prefabs, scenes and folders cannot hold metadata.
 
@@ -42,7 +42,7 @@ public class SurfaceMetadata : CustomAssetMetadata
 
 ## In the editor
 
-The **+** at the bottom left of an asset's inspector header adds metadata. Each metadata gets a foldout under the header; right click its title to remove it. With several assets selected, metadata they all have is edited together.
+The **+** at the bottom left of an asset's inspector header adds metadata. Each metadata gets a title bar under the header, like a component: click it to fold the metadata away, and remove it from its menu or with a right click. The asset's own inspector follows under a title bar of its own. With several assets selected, metadata they all have is edited together.
 
 From code:
 

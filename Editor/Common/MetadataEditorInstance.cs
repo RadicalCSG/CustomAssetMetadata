@@ -123,9 +123,12 @@ sealed class MetadataEditorInstance : IDisposable
 
     void DrawMetadata()
     {
-        var rect = GUILayoutUtility.GetRect(GUIContent.none, InspectorLayout.InspectorTitlebar);
-        showMetadata = InspectorLayout.FoldoutTitlebar(rect, showMetadata, metadataContent, false, InspectorLayout.InspectorTitlebar, InspectorLayout.InspectorTitlebarText);
-        if (showMetadata)
+        var content = new GUIContent(metadataContent.text, AssetPreview.GetMiniTypeThumbnail(typeof(ScriptableObject)));
+        showMetadata = Titlebar(showMetadata, content, menu => menu.AddItem(new GUIContent("Remove"), false, DestroyMetadata));
+        if (!showMetadata)
+            return;
+
+        using (new EditorGUILayout.VerticalScope(EditorStyles.inspectorDefaultMargins))
         {
             if (MixedValues)
             {
@@ -140,18 +143,76 @@ sealed class MetadataEditorInstance : IDisposable
             {
                 EditorGUILayout.Space(3);
                 ShowMetadataEditor();
-                EditorGUILayout.Space();
             }
+            EditorGUILayout.Space();
         }
+    }
+
+    static GUIStyle s_TitlebarStyle;
+    static GUIStyle TitlebarStyle => s_TitlebarStyle ??= GUI.skin.FindStyle("IN Title") ?? EditorStyles.toolbar;
+    static readonly int s_TitlebarHash = "CustomAssetMetadataTitlebar".GetHashCode();
+
+    /// <summary>
+    /// Draws a title bar like the ones of components: a foldout arrow when <paramref name="foldout"/> has a value,
+    /// an icon, a title and, when <paramref name="fillMenu"/> is set, a menu opened from its button or a context click.
+    /// </summary>
+    /// <returns>The new foldout state, or true when there is no foldout.</returns>
+    internal static bool Titlebar(bool? foldout, GUIContent content, Action<GenericMenu> fillMenu)
+    {
+        var rect = GUILayoutUtility.GetRect(GUIContent.none, TitlebarStyle, GUILayout.ExpandWidth(true));
+        int id = GUIUtility.GetControlID(s_TitlebarHash, FocusType.Passive, rect);
+        var middle = rect.y + rect.height * 0.5f;
+        var foldoutRect = new Rect(rect.x + 4, middle - 6.5f, 13, 13);
+        var iconRect = new Rect(rect.x + 20, middle - 8, 16, 16);
+        var menuRect = new Rect(rect.xMax - 20, middle - 8, 16, 16);
+        var textRect = new Rect(rect.x + 40, rect.y, rect.width - 64, rect.height);
 
         var evt = Event.current;
-        if (evt.type == EventType.ContextClick && rect.Contains(evt.mousePosition))
+        switch (evt.type)
         {
-            var menu = new GenericMenu();
-            menu.AddItem(new GUIContent("Remove"), false, DestroyMetadata);
-            menu.ShowAsContext();
-            evt.Use();
+            case EventType.Repaint:
+            {
+                var hover = rect.Contains(evt.mousePosition);
+                TitlebarStyle.Draw(rect, GUIContent.none, id, foldout ?? false, hover);
+                if (foldout.HasValue)
+                    EditorStyles.foldout.Draw(foldoutRect, GUIContent.none, id, foldout.Value, hover);
+                if (content.image != null)
+                    GUI.DrawTexture(iconRect, content.image, ScaleMode.ScaleToFit);
+                EditorStyles.boldLabel.Draw(textRect, new GUIContent(content.text), false, false, false, false);
+                if (fillMenu != null)
+                    EditorStyles.iconButton.Draw(menuRect, EditorGUIUtility.IconContent("_Menu"), false, false, false, false);
+                break;
+            }
+            case EventType.MouseDown:
+            {
+                if (evt.button != 0 || !rect.Contains(evt.mousePosition))
+                    break;
+                if (fillMenu != null && menuRect.Contains(evt.mousePosition))
+                {
+                    var menu = new GenericMenu();
+                    fillMenu(menu);
+                    menu.DropDown(menuRect);
+                    evt.Use();
+                } else if (foldout.HasValue)
+                {
+                    foldout = !foldout.Value;
+                    GUI.changed = true;
+                    evt.Use();
+                }
+                break;
+            }
+            case EventType.ContextClick:
+            {
+                if (fillMenu == null || !rect.Contains(evt.mousePosition))
+                    break;
+                var menu = new GenericMenu();
+                fillMenu(menu);
+                menu.ShowAsContext();
+                evt.Use();
+                break;
+            }
         }
+        return foldout ?? true;
     }
 
     internal void DestroyMetadata()
@@ -354,6 +415,11 @@ public sealed class MetadataEditor : IDisposable
                 {
                     metadataEditors[i].OnInspectorGUI();
                 }
+
+                // The asset's own inspector follows, so give it a title bar like the metadata
+                var asset = targets[0];
+                var title = ObjectNames.NicifyVariableName(asset.GetType().Name);
+                MetadataEditorInstance.Titlebar(null, new GUIContent(title, AssetPreview.GetMiniThumbnail(asset)), null);
             }
 
             GUILayout.EndVertical();
