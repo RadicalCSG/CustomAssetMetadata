@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.2.3 (2026-10-26)
 - Metadata kept as a hidden sub-asset is found, in the editor and in builds
 - Unity 6.5 forward compatibility
 - Fixed a build error
