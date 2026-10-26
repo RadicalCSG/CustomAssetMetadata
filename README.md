@@ -2,7 +2,7 @@
 
 Store your own data with Unity assets. You write metadata classes, add them to an asset in its inspector, and look them up from that asset in the editor and at runtime.
 
-![image](https://github.com/LogicalError/CustomAssetMetadata/assets/157976/bbdb5af7-96ae-4b95-87fa-2c4a6947cdcc)
+![A material's inspector with Surface metadata under its header](Documentation~/inspector.png)
 
 Metadata is stored inside the asset file, so it can only be added to assets Unity stores in its own format: materials, ScriptableObject assets, animation clips, render textures and the like. Imported assets (textures, models, audio), prefabs, scenes and folders cannot hold metadata.
 
@@ -20,7 +20,7 @@ The **Samples** tab of the package has a small example project.
 
 ## Writing metadata
 
-A metadata class derives from `CustomAssetMetadata`, which is a `ScriptableObject`. Put each one in a file of the same name, like any ScriptableObject.
+A metadata class derives from `CustomAssetMetadata`, which is a `ScriptableObject`. Like any ScriptableObject, each one needs a file of the same name (`SurfaceMetadata.cs` below); without it Unity cannot load the metadata back, so the class is not offered.
 
 ```cs
 [AddMetadataMenu("Rendering/Surface")]
@@ -52,7 +52,7 @@ AssetMetadataUtility.Destroy(surface);
 AssetMetadataUtility.CanAddMetadataType(material, typeof(SurfaceMetadata));
 ```
 
-Adding or removing metadata saves the asset. Assets that hold metadata get the `AssetMetadata` label.
+Adding or removing metadata saves the asset, and can be undone. Assets that hold metadata get the `AssetMetadata` label.
 
 ## At runtime
 
@@ -63,6 +63,10 @@ var owner = surface.AssociatedAsset;
 ```
 
 When building a player, the metadata of every asset the build includes (through its scenes, Resources folders or preloaded assets) is copied into `Assets/Resources/__AssetMetadata`, and removed again afterwards. Metadata of assets that only live in AssetBundles or Addressables is not available in a player.
+
+## Changes
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
