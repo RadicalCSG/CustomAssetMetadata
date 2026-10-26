@@ -16,6 +16,7 @@ public static class AssetMetadataUtility
 	static Dictionary<Type, Type[]> restrictedTypesLookup;
 	static Dictionary<Type, (string displayName, string menuPath)> metadataNames;
 	static List<Type> allCustomAssetMetadataTypes;
+	static readonly Dictionary<Type, bool> hasScriptAsset = new();
 
 	[MethodImpl(MethodImplOptions.AggressiveInlining)]
     static void EnsureInitialized()
@@ -148,6 +149,30 @@ public static class AssetMetadataUtility
     }
 
     /// <summary>
+    /// Whether Unity has a script asset for the metadata type. Without one, which happens when the class is not
+    /// in a file of its own name, Unity cannot load the metadata back or restore it on undo.
+    /// </summary>
+    public static bool HasScriptAsset(Type metadataType)
+    {
+        if (metadataType == null) throw new NullReferenceException(nameof(metadataType));
+        if (hasScriptAsset.TryGetValue(metadataType, out var found))
+            return found;
+
+        found = false;
+        foreach (var guid in AssetDatabase.FindAssets($"t:MonoScript {metadataType.Name}"))
+        {
+            var script = AssetDatabase.LoadAssetAtPath<MonoScript>(AssetDatabase.GUIDToAssetPath(guid));
+            if (script != null && script.GetClass() == metadataType)
+            {
+                found = true;
+                break;
+            }
+        }
+        hasScriptAsset[metadataType] = found;
+        return found;
+    }
+
+    /// <summary>
     /// Whether metadata added to <paramref name="target"/> is kept. Sub-assets added to imported assets
     /// (textures, models, prefabs, scenes) or folders are lost on the next import.
     /// </summary>
@@ -163,6 +188,11 @@ public static class AssetMetadataUtility
 		if (target == null || ReferenceEquals(target, null)) throw new NullReferenceException(nameof(target));
 		if (type == null) throw new NullReferenceException(nameof(type));
 		EnsureInitialized();
+		if (!HasScriptAsset(type))
+		{
+			Debug.LogError($"AssetMetadataUtility.Add: {type.Name} can only be stored when it is in a file called {type.Name}.cs");
+			return null;
+		}
 		if (!CanAddMetadataType(target, type))
             return null;
 
@@ -202,6 +232,8 @@ public static class AssetMetadataUtility
 		if (target == null || ReferenceEquals(target, null)) throw new NullReferenceException(nameof(target));
 		EnsureInitialized();
         if (!CanStoreMetadata(target))
+            return false;
+        if (!HasScriptAsset(type))
             return false;
         if (disallowMultipleMetadataLookup.Contains(type))
         {

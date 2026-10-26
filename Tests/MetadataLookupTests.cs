@@ -9,25 +9,6 @@ using UnityEngine;
 
 namespace AssetMetadata.Tests
 {
-	class TestMetadata : CustomAssetMetadata
-	{
-		public int value;
-	}
-
-	class OtherTestMetadata : CustomAssetMetadata
-	{
-	}
-
-	[DisallowMultipleCustomAssetMetadata]
-	class SingletonTestMetadata : CustomAssetMetadata
-	{
-	}
-
-	[RestrictMetadataAssetTypes(typeof(Texture2D))]
-	class TextureOnlyTestMetadata : CustomAssetMetadata
-	{
-	}
-
 	[TestFixture]
 	public class MetadataLookupTests
 	{

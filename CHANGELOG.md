@@ -12,6 +12,7 @@
 - The metadata menu follows the order given to AddMetadataMenu, and leaves out abstract metadata classes
 - Builds only include the metadata of assets they include anyway; every asset with metadata used to be pulled into every build
 - Adding and removing metadata can be undone
+- Metadata classes that are not in a file of their own name are no longer offered: Unity cannot load them back or restore them on undo
 - The remove menu opens on a context click instead of reading a private Unity field
 - Requires Unity 6000.3 or newer, which the package already needed since 1.2.3
 - The sample's AudioClip-only metadata is now for animation clips, as audio clips cannot hold metadata

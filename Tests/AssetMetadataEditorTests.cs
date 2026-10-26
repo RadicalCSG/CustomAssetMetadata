@@ -10,31 +10,12 @@ using UnityEngine.TestTools;
 
 namespace AssetMetadata.Tests
 {
-	[DisallowMultipleCustomAssetMetadata]
-	class BaseSingleTestMetadata : CustomAssetMetadata
-	{
-	}
-
-	class DerivedSingleTestMetadata : BaseSingleTestMetadata
-	{
-	}
-
-	[RestrictMetadataAssetTypes(typeof(Texture))]
-	class AnyTextureTestMetadata : CustomAssetMetadata
-	{
-	}
-
 	abstract class AbstractTestMetadata : CustomAssetMetadata
 	{
 	}
 
-	[AddMetadataMenu("Order/Late", 10)]
-	class LateTestMetadata : CustomAssetMetadata
-	{
-	}
-
-	[AddMetadataMenu("Order/Early", -10)]
-	class EarlyTestMetadata : CustomAssetMetadata
+	// Deliberately not in a file of its own name, so Unity has no script asset for it
+	class NoScriptFileTestMetadata : CustomAssetMetadata
 	{
 	}
 
@@ -245,6 +226,16 @@ namespace AssetMetadata.Tests
 			var types = AssetMetadataUtility.AllMetadataTypes;
 			Assert.That(types.IndexOf(typeof(EarlyTestMetadata)), Is.LessThan(types.IndexOf(typeof(LateTestMetadata))));
 			Assert.That(types.IndexOf(typeof(LateTestMetadata)), Is.GreaterThan(types.IndexOf(typeof(TestMetadata))));
+		}
+
+		[Test]
+		public void MetadataWithoutAScriptFile_CannotBeAdded()
+		{
+			var material = CreateMaterial();
+			Assert.That(AssetMetadataUtility.CanAddMetadataType(material, typeof(NoScriptFileTestMetadata)), Is.False);
+			LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(nameof(NoScriptFileTestMetadata) + @"\.cs"));
+			Assert.That(AssetMetadataUtility.Add<NoScriptFileTestMetadata>(material), Is.Null);
+			Assert.That(AssetMetadataUtility.CanAddMetadataType(material, typeof(ReloadableTestMetadata)), Is.True);
 		}
 
 		[Test]
