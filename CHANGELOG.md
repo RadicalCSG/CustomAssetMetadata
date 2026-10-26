@@ -1,21 +1,23 @@
-MIT License
+# Changelog
 
-Copyright (c) 2019 Sander van Rossen
+## Unreleased
+- Metadata kept as a hidden sub-asset is found, in the editor and in builds
+- Unity 6.5 forward compatibility
+- Fixed a build error
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## 1.2.2 (2024-10-30)
+- Fixed Resources.FindObjectsOfTypeAll in builds
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+## 1.2.1 (2024-10-29)
+- CustomAssetMetadata.AssociatedAsset: the asset a metadata object belongs to
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+## 1.2.0 (2024-08-31)
+- Default values for metadata
+- HasMetadataOfType on materials, and AddMetadataOfType (editor only)
+- An improved metadata menu; the metadata lookup uses LazyLoadReference
+- Fixed a package GUID conflict
+
+## Earlier
+- Metadata is only looked for on materials, as looking on every object was too slow
+- Inspector fixes
+- First release
