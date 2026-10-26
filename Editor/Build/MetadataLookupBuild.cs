@@ -59,16 +59,26 @@ public class MetadataLookupPreprocessBuild : IPreprocessBuildWithReport
         return metadata;
     }
 
+    const string kResourcesPath = "Assets/Resources";
+    const string kBasePath = kResourcesPath + "/" + MetadataLookup.kResourcePath;
+    const string kCreatedResourcesKey = "CustomAssetMetadata.CreatedResourcesDirectory";
+
     public void OnPreprocessBuild(BuildReport report)
     {
-        const string basePath = "Assets/Resources/" + MetadataLookup.kResourcePath;
+        RemoveBuildResources();
+
+        HadResourcesDirectory = System.IO.Directory.Exists(kResourcesPath);
+        // Survives domain reloads, unlike a static
+        SessionState.SetBool(kCreatedResourcesKey, !HadResourcesDirectory);
+
+        // The postprocess step is skipped when a build fails
+        EditorApplication.delayCall -= RemoveBuildResources;
+        EditorApplication.delayCall += RemoveBuildResources;
+
         AssetDatabase.StartAssetEditing();
         try
         {
-            HadResourcesDirectory = System.IO.Directory.Exists("Assets/Resources/");
-            if (System.IO.Directory.Exists(basePath))
-                System.IO.Directory.Delete(basePath, true);
-            System.IO.Directory.CreateDirectory(basePath);
+            System.IO.Directory.CreateDirectory(kBasePath);
             var list = ScriptableObject.CreateInstance<MetadataLookupAsset>();
 
             var allMetadata = new List<CustomAssetMetadata>();
@@ -76,10 +86,10 @@ public class MetadataLookupPreprocessBuild : IPreprocessBuildWithReport
 
             int index = 0;
             for (int i = 0; i < allMetadata.Count; i++)
-                allMetadata[i] = CloneCustomAssetMetadata(allMetadata[i], basePath, ref index);
+                allMetadata[i] = CloneCustomAssetMetadata(allMetadata[i], kBasePath, ref index);
 
             list.allMetadata = allMetadata.ToArray();
-            AssetDatabase.CreateAsset(list, $"{basePath}/{MetadataLookup.kAssetName}.asset");
+            AssetDatabase.CreateAsset(list, $"{kBasePath}/{MetadataLookup.kAssetName}.asset");
         }
         finally
         {
@@ -87,6 +97,38 @@ public class MetadataLookupPreprocessBuild : IPreprocessBuildWithReport
         }
     }
 
+    [InitializeOnLoadMethod]
+    static void RemoveLeftoversOnLoad()
+    {
+        EditorApplication.delayCall += () =>
+        {
+            if (!BuildPipeline.isBuildingPlayer)
+                RemoveBuildResources();
+        };
+    }
+
+    /// <summary>
+    /// Removes the metadata copies a build puts in Resources, and the Resources directory when the build
+    /// created it and nothing else was put in it.
+    /// </summary>
+    internal static void RemoveBuildResources()
+    {
+        if (AssetDatabase.IsValidFolder(kBasePath))
+            AssetDatabase.DeleteAsset(kBasePath);
+        else if (System.IO.Directory.Exists(kBasePath))
+        {
+            System.IO.Directory.Delete(kBasePath, true);
+            System.IO.File.Delete(kBasePath + ".meta");
+        }
+
+        if (SessionState.GetBool(kCreatedResourcesKey, false) &&
+            System.IO.Directory.Exists(kResourcesPath) &&
+            System.IO.Directory.GetFileSystemEntries(kResourcesPath).Length == 0)
+        {
+            AssetDatabase.DeleteAsset(kResourcesPath);
+        }
+        SessionState.EraseBool(kCreatedResourcesKey);
+    }
 }
 
 
@@ -96,32 +138,6 @@ public class MetadataLookupPostprocessBuild : IPostprocessBuildWithReport
 
     public void OnPostprocessBuild(BuildReport report)
     {
-        AssetDatabase.StartAssetEditing();
-        try
-        {
-            if (!MetadataLookupPreprocessBuild.HadResourcesDirectory)
-            {
-                const string basePath = "Assets/Resources";
-                if (System.IO.Directory.Exists(basePath))
-                    System.IO.Directory.Delete(basePath, true);
-
-                const string metaFile = basePath + ".meta";
-                if (System.IO.File.Exists(metaFile))
-                    System.IO.File.Delete(metaFile);
-            } else
-            {
-                const string basePath = "Assets/Resources/" + MetadataLookup.kResourcePath;
-                if (System.IO.Directory.Exists(basePath))
-                    System.IO.Directory.Delete(basePath, true);
-
-                const string metaFile = basePath + ".meta";
-                if (System.IO.File.Exists(metaFile))
-                    System.IO.File.Delete(metaFile);
-            }
-        }
-        finally
-        {
-            AssetDatabase.StopAssetEditing();
-        }
+        MetadataLookupPreprocessBuild.RemoveBuildResources();
     }
 }

@@ -46,6 +46,8 @@ sealed class MetadataEditorInstance : IDisposable
 
     public bool Destroyed { get { return metadata == null; } }
 
+    internal CustomAssetMetadata[] Metadata => metadata;
+
     public bool MixedValues
     {
         get
@@ -104,9 +106,23 @@ sealed class MetadataEditorInstance : IDisposable
         if (targets == null || targets.Length == 0 || metadata == null || metadata.Length == 0)
             return;
 
+        var indentLevel = EditorGUI.indentLevel;
+        var labelWidth = EditorGUIUtility.labelWidth;
         EditorGUI.indentLevel = 0;
         EditorGUIUtility.labelWidth = 0;
+        try
+        {
+            DrawMetadata();
+        }
+        finally
+        {
+            EditorGUI.indentLevel = indentLevel;
+            EditorGUIUtility.labelWidth = labelWidth;
+        }
+    }
 
+    void DrawMetadata()
+    {
         var rect = GUILayoutUtility.GetRect(GUIContent.none, InspectorLayout.InspectorTitlebar);
         showMetadata = InspectorLayout.FoldoutTitlebar(rect, showMetadata, metadataContent, false, InspectorLayout.InspectorTitlebar, InspectorLayout.InspectorTitlebarText);
         var controlId = InspectorLayout.LastControlId;
@@ -114,9 +130,13 @@ sealed class MetadataEditorInstance : IDisposable
         {
             if (MixedValues)
             {
-                EditorGUI.showMixedValue = true;
-                EditorGUILayout.LabelField("\u2026");
-                EditorGUI.showMixedValue = false;
+                int count = 0;
+                foreach (var item in metadata)
+                {
+                    if (item != null)
+                        count++;
+                }
+                EditorGUILayout.HelpBox($"Only {count} of the {targets.Length} selected assets have this metadata. Select those on their own to edit it.", MessageType.Info);
             } else
             {
                 EditorGUILayout.Space(3);
@@ -142,13 +162,14 @@ sealed class MetadataEditorInstance : IDisposable
         }
     }
 
-    void DestroyMetadata()
+    internal void DestroyMetadata()
     {
         if (metadata != null)
         {
             for (int i = metadata.Length - 1; i >= 0; i--)
             {
-                AssetMetadataUtility.Destroy(metadata[i]);
+                if (metadata[i] != null)
+                    AssetMetadataUtility.Destroy(metadata[i]);
             }
         }
         metadata = null;
@@ -176,7 +197,10 @@ public sealed class MetadataEditor : IDisposable
     public void Dispose()
     {
         DestroyEditors(ref metadataEditors);
+        IsDisposed = true;
     }
+
+    internal bool IsDisposed { get; private set; }
 
 
     static void DestroyEditors(ref MetadataEditorInstance[] metadataEditors)
@@ -215,7 +239,7 @@ public sealed class MetadataEditor : IDisposable
         }
     }
 
-    static MetadataEditorInstance[] CreateEditors(UnityEngine.Object[] targets)
+    internal static MetadataEditorInstance[] CreateEditors(UnityEngine.Object[] targets)
     {
         if (targets == null)
         {
@@ -223,40 +247,47 @@ public sealed class MetadataEditor : IDisposable
             return null;
         }
 
-        var types               = ListPool<Type>.Get();
-        var typeMetadata        = ListPool<List<CustomAssetMetadata>>.Get();
+        // The n-th metadata of a type on one target is edited together with the n-th of that type on the others
+        var keys                = new List<(Type type, int occurrence)>();
+        var keyMetadata         = new Dictionary<(Type type, int occurrence), CustomAssetMetadata[]>();
+        var occurrences         = new Dictionary<Type, int>();
         var temporaryMetadata   = ListPool<CustomAssetMetadata>.Get();
-
-        AssetMetadataUtility.GetAll(targets[0], temporaryMetadata);
-        for (int i = 0; i < temporaryMetadata.Count; i++)
+        try
         {
-            var metadataItem = temporaryMetadata[i];
-            if (metadataItem == null)
-                continue;
-            types.Add(metadataItem.GetType());
-            typeMetadata.Add(new List<CustomAssetMetadata>
+            for (int t = 0; t < targets.Length; t++)
             {
-                metadataItem
-            });
-        }
+                temporaryMetadata.Clear();
+                occurrences.Clear();
+                AssetMetadataUtility.GetAll(targets[t], temporaryMetadata);
+                foreach (var metadataItem in temporaryMetadata)
+                {
+                    if (metadataItem == null)
+                        continue;
+                    var type = metadataItem.GetType();
+                    occurrences.TryGetValue(type, out var occurrence);
+                    occurrences[type] = occurrence + 1;
 
-        for (int i = 1; i < targets.Length; i++)
+                    var key = (type, occurrence);
+                    if (!keyMetadata.TryGetValue(key, out var perTarget))
+                    {
+                        perTarget = new CustomAssetMetadata[targets.Length];
+                        keyMetadata[key] = perTarget;
+                        keys.Add(key);
+                    }
+                    perTarget[t] = metadataItem;
+                }
+            }
+        }
+        finally
         {
-            AssetMetadataUtility.GetAll(targets[i], temporaryMetadata);
-
-            // TODO: do something clever to support metadata w/ multiple targets
+            ListPool<CustomAssetMetadata>.Release(temporaryMetadata);
         }
 
-        var metadataEditors = new MetadataEditorInstance[typeMetadata.Count];
-        for (int i = 0; i < typeMetadata.Count; i++)
+        var metadataEditors = new MetadataEditorInstance[keys.Count];
+        for (int i = 0; i < keys.Count; i++)
         {
-            metadataEditors[i] = MetadataEditorInstance.Create(targets, typeMetadata[i].ToArray(), types[i]);
+            metadataEditors[i] = MetadataEditorInstance.Create(targets, keyMetadata[keys[i]], keys[i].type);
         }
-
-        ListPool<Type>.Release(types);
-        ListPool<List<CustomAssetMetadata>>.Release(typeMetadata);
-        ListPool<CustomAssetMetadata>.Release(temporaryMetadata);
-
         return metadataEditors;
     }
 
@@ -267,10 +298,6 @@ public sealed class MetadataEditor : IDisposable
         using (new EditorGUI.DisabledScope(!canOpenForEdit))
         {
             if (targets == null || !AssetMetadataUtility.HaveMetadataTypes)
-                return;
-
-            // TODO: support multiple targets
-            if (targets.Length > 1)
                 return;
 
 			metadataEditors ??= CreateEditors(targets);

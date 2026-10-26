@@ -26,17 +26,33 @@ static class EditorHeaderHook
     {
         if (!GUI.enabled)
             return;
-        if (!AssetMetadataUtility.CanStoreMetadata(editor.target))
+        if (!ShowsMetadata(editor.targets))
             return;
 
+        GetMetadataEditor(editor).OnInspectorGUI();
+    }
+
+    internal static bool ShowsMetadata(Object[] targets)
+    {
+        foreach (var target in targets)
+        {
+            if (!AssetMetadataUtility.CanStoreMetadata(target))
+                return false;
+        }
+        return targets.Length > 0;
+    }
+
+    internal static bool IsCached(Editor editor) => _targetsCache.ContainsKey(editor);
+
+    internal static MetadataEditor GetMetadataEditor(Editor editor)
+    {
         if (_targetsCache.TryGetValue(editor, out var cache) == false || Equality(cache.targets, editor.targets) == false)
         {
             cache.editor?.Dispose();
             RemoveDestroyedEditors();
             _targetsCache[editor] = cache = (editor.targets, new MetadataEditor(editor.targets));
         }
-
-        cache.editor.OnInspectorGUI();
+        return cache.editor;
 
         static bool Equality<T>(T[] a, T[] b)
         {

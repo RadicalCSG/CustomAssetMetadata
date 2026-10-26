@@ -9,9 +9,9 @@ public static class InspectorLayout
     static GUIStyle s_InspectorTitlebar = null;
     static GUIStyle s_InspectorTitlebarText = null;
 
-    public static GUIStyle TitlebarFoldout => (s_InspectorTitlebarText == null) ? GetStyle("Titlebar Foldout") : s_TitlebarFoldout;
-    public static GUIStyle InspectorTitlebar => (s_InspectorTitlebarText == null) ? GetStyle("IN Title") : s_InspectorTitlebar;
-    public static GUIStyle InspectorTitlebarText => (s_InspectorTitlebarText == null) ? GetStyle("IN TitleText") : s_InspectorTitlebarText;
+    public static GUIStyle TitlebarFoldout => s_TitlebarFoldout ??= GetStyle("Titlebar Foldout");
+    public static GUIStyle InspectorTitlebar => s_InspectorTitlebar ??= GetStyle("IN Title");
+    public static GUIStyle InspectorTitlebarText => s_InspectorTitlebarText ??= GetStyle("IN TitleText");
 
     static GUIStyle GetStyle(string styleName)
     {

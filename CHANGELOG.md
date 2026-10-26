@@ -4,7 +4,12 @@
 - Metadata on any asset Unity stores in its own format, not only materials; the add button is in the inspector header (thanks to Eideren)
 - Assets holding metadata get the "AssetMetadata" label, which builds use to find their metadata
 - GetMetadataOfType, HasMetadataOfType and AddMetadataOfType work on any asset
+- Several selected assets show their metadata together: metadata they all have is edited at once, metadata only some have says so
 - Fixed metadata editors leaking when the inspector changes selection
+- Fixed added or removed metadata only reaching disk when the project was saved
+- Fixed a failed build leaving metadata copies in Assets/Resources, where the editor found them as extra metadata
+- DisallowMultipleCustomAssetMetadata counts subtypes, as documented; RestrictMetadataAssetTypes accepts subclasses of the listed types
+- The metadata menu follows the order given to AddMetadataMenu, and leaves out abstract metadata classes
 
 ## 1.2.3 (2026-10-26)
 - Metadata kept as a hidden sub-asset is found, in the editor and in builds

@@ -25,10 +25,11 @@ public static class AssetMetadataUtility
 
         var metadataTypes = TypeCache.GetTypesDerivedFrom<CustomAssetMetadata>();
 		metadataNames = new Dictionary<Type, (string displayName, string menuPath)>(metadataTypes.Count);
-		allCustomAssetMetadataTypes = metadataTypes.ToList();
+		allCustomAssetMetadataTypes = metadataTypes.Where(type => !type.IsAbstract && !type.ContainsGenericParameters).ToList();
         restrictedTypesLookup = new Dictionary<Type, Type[]>();
         disallowMultipleMetadataLookup = new HashSet<Type>();
-		foreach (var metadataType in metadataTypes)
+		var menuOrder = new Dictionary<Type, int>();
+		foreach (var metadataType in allCustomAssetMetadataTypes)
         {
             string displayName = null;
 			string menuName = null;
@@ -43,6 +44,7 @@ public static class AssetMetadataUtility
 			if (addMetadataMenuAttribute != null)
 			{
 				menuName = addMetadataMenuAttribute.MetadataMenu.Replace('\\', '/');
+				menuOrder[metadataType] = addMetadataMenuAttribute.MetadataOrder;
 			}
             
             if (displayName == null && menuName != null)
@@ -73,6 +75,15 @@ public static class AssetMetadataUtility
 				restrictedTypesLookup[metadataType] = restrictMetadataAssetTypesAttribute.Types;
 			}
 		}
+
+		allCustomAssetMetadataTypes.Sort((a, b) =>
+		{
+			menuOrder.TryGetValue(a, out var orderA);
+			menuOrder.TryGetValue(b, out var orderB);
+			if (orderA != orderB)
+				return orderA.CompareTo(orderB);
+			return string.CompareOrdinal(metadataNames[a].menuPath, metadataNames[b].menuPath);
+		});
     }
 
     public static bool HaveMetadataTypes
@@ -173,8 +184,7 @@ public static class AssetMetadataUtility
             assetMetadata.OnReset();
 			AssetDatabase.AddObjectToAsset(assetMetadata, assetPath);
             SetMetadataLabel(assetPath, true);
-            AssetDatabase.ImportAsset(assetPath);
-            AssetDatabase.Refresh();
+            SaveAndImport(assetPath);
             // OnEnable runs before the reference is assigned, so register explicitly.
             MetadataLookup.Register(target, assetMetadata);
             return assetMetadata;
@@ -202,7 +212,7 @@ public static class AssetMetadataUtility
         var targetType = target.GetType();
 		foreach (var restrictedType in restrictedTypes)
         {
-            if (restrictedType == targetType)
+            if (restrictedType != null && restrictedType.IsAssignableFrom(targetType))
                 return true;
         }
         return false;
@@ -224,7 +234,7 @@ public static class AssetMetadataUtility
 		EnsureInitialized();
 
         var assetPath = AssetDatabase.GetAssetPath(metadata);
-        if (assetPath == null)
+        if (string.IsNullOrEmpty(assetPath))
             return;
 
         // Unregister before removing the sub-asset, while its reference still resolves.
@@ -234,8 +244,19 @@ public static class AssetMetadataUtility
         UnityEngine.Object.DestroyImmediate(metadata); // we need to destroy it otherwise it'll be saved to the scene
         if (!AnyMetadataAtPath(assetPath))
             SetMetadataLabel(assetPath, false);
+        SaveAndImport(assetPath);
+    }
+
+    static void SaveAndImport(string assetPath)
+    {
+        var mainAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+        if (mainAsset != null)
+        {
+            // Adding or removing a sub-asset does not dirty the main asset
+            EditorUtility.SetDirty(mainAsset);
+            AssetDatabase.SaveAssetIfDirty(mainAsset);
+        }
         AssetDatabase.ImportAsset(assetPath);
-        AssetDatabase.Refresh();
     }
 
     static bool AnyMetadataAtPath(string assetPath)

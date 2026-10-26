@@ -81,7 +81,7 @@ internal static class MetadataLookup
 		for (int i = 0; i < metadataList.Count; i++)
 		{
 			if (metadataList[i] != null &&
-				metadataList[i].GetType() == type)
+				type.IsInstanceOfType(metadataList[i]))
 				return true;
 		}
 		return false;
