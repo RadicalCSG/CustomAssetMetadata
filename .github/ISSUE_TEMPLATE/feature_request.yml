@@ -1,0 +1,18 @@
+name: Feature request
+description: An idea for the package
+labels: [enhancement]
+body:
+  - type: textarea
+    id: wanted
+    attributes:
+      label: What you would like to do
+    validations:
+      required: true
+  - type: textarea
+    id: now
+    attributes:
+      label: How you do it now, if at all
+  - type: textarea
+    id: else
+    attributes:
+      label: Anything else

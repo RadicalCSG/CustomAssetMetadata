@@ -1,0 +1,36 @@
+name: Bug report
+description: Something does not work as described
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1.
+        2.
+  - type: input
+    id: unity-version
+    attributes:
+      label: Unity version
+    validations:
+      required: true
+  - type: input
+    id: package-version
+    attributes:
+      label: Custom Asset Metadata version
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors
+      render: text
