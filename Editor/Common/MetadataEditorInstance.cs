@@ -260,11 +260,8 @@ public sealed class MetadataEditor : IDisposable
         return metadataEditors;
     }
 
-    static GUILayoutOption[] addMetadataButtonOptions = {
-		GUILayout.Width(230), GUILayout.Height(24), 
-        GUILayout.ExpandWidth(false)
-	};
-
+    private static GUIContent addMetadataButton = new GUIContent("+", "Add Metadata");
+    
     public void OnInspectorGUI()
     {
         using (new EditorGUI.DisabledScope(!canOpenForEdit))
@@ -283,18 +280,7 @@ public sealed class MetadataEditor : IDisposable
             // TODO: make it possible to re-order metadata like Components on GameObjects
 
             GUILayout.BeginVertical();
-            EditorGUILayout.Space();
-            // We seem to get the metadata in reverse order from the assetdatabase, compared to the order we add them
-            // So to make things feel more consistent, we reverse the order
-            for (int i = metadataEditors.Length - 1; i >= 0; i--)
-            {
-                metadataEditors[i].OnInspectorGUI();
-            }
 
-            EditorGUILayout.Space();
-
-			GUILayout.BeginHorizontal();
-			GUILayout.FlexibleSpace();
             List<Type> filteredMetadata = ListPool<Type>.Get();
             try
             {
@@ -311,7 +297,11 @@ public sealed class MetadataEditor : IDisposable
                 }
                 using (new EditorGUI.DisabledScope(!canAddMetadata))
                 {
-                    if (GUILayout.Button("Add Metadata", addMetadataButtonOptions))
+                    // Embed the button inside the previous rect
+                    var rect = GUILayoutUtility.GetRect(0,0,0,0);
+                    rect.width = rect.height = EditorGUIUtility.singleLineHeight;
+                    rect.y -= rect.height;
+                    if (GUI.Button(rect, addMetadataButton))
                     {
                         // TODO: have a nicer dropdownmenu, more like the "add components" menu
                         var menu = new GenericMenu();
@@ -336,10 +326,18 @@ public sealed class MetadataEditor : IDisposable
             {
                 ListPool<Type>.Release(filteredMetadata);
             }
-			GUILayout.FlexibleSpace();
-			GUILayout.EndHorizontal();
 
-			GUILayout.EndVertical();
+            if (metadataEditors.Length > 0)
+            {
+                // We seem to get the metadata in reverse order from the assetdatabase, compared to the order we add them
+                // So to make things feel more consistent, we reverse the order
+                for (int i = metadataEditors.Length - 1; i >= 0; i--)
+                {
+                    metadataEditors[i].OnInspectorGUI();
+                }
+            }
+
+            GUILayout.EndVertical();
         }
     }
 }

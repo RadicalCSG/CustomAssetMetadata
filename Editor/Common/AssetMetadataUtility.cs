@@ -116,16 +116,28 @@ public static class AssetMetadataUtility
 		if (metadata == null) throw new NullReferenceException(nameof(metadata));
 		EnsureInitialized();
 		var assetPath = AssetDatabase.GetAssetPath(target);
-        if (assetPath == null ||
-            string.IsNullOrEmpty(assetPath))
+        if (assetPath == null || string.IsNullOrEmpty(assetPath))
             return;
 
-        var assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
-        foreach (var asset in assets)
+        if (target is SceneAsset)
         {
-            if (asset is CustomAssetMetadata additionalDataAsset)
+            // calling LoadAllAssetsAtPath with a scene throws, this doesn't.
+            // Still, right now scenes do not support adding metadata so this cannot be validated further
+            foreach (var allMetadataType in AllMetadataTypes)
             {
+                var additionalDataAsset = (CustomAssetMetadata)AssetDatabase.LoadAssetAtPath(assetPath, allMetadataType);
                 metadata.Add(additionalDataAsset);
+            }
+        }
+        else
+        {
+            var assets = AssetDatabase.LoadAllAssetsAtPath(assetPath);
+            foreach (var asset in assets)
+            {
+                if (asset is CustomAssetMetadata additionalDataAsset)
+                {
+                    metadata.Add(additionalDataAsset);
+                }
             }
         }
     }
