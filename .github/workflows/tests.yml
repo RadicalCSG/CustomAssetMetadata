@@ -7,24 +7,16 @@ on:
 
 jobs:
   editmode:
+    # Needs the UNITY_LICENSE, UNITY_EMAIL and UNITY_PASSWORD secrets, and the repository variable
+    # UNITY_TESTS set to true; until then, and for pull requests from forks, the job shows as skipped.
+    if: >-
+      vars.UNITY_TESTS == 'true' &&
+      (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
-    env:
-      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
     steps:
-      # Forks and repositories without a Unity license cannot run Unity
-      - name: Check for a Unity license
-        id: license
-        run: echo "present=${{ env.UNITY_LICENSE != '' }}" >> "$GITHUB_OUTPUT"
-
-      - name: Skip without a license
-        if: steps.license.outputs.present != 'true'
-        run: echo "::notice::The UNITY_LICENSE secret is not set, so the tests did not run"
-
       - uses: actions/checkout@v4
-        if: steps.license.outputs.present == 'true'
 
       - uses: game-ci/unity-test-runner@v4
-        if: steps.license.outputs.present == 'true'
         env:
           UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
