@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.3.0 (2026-10-26)
 - Metadata on any asset Unity stores in its own format, not only materials; the add button is in the inspector header (thanks to Eideren)
 - Assets holding metadata get the "AssetMetadata" label, which builds use to find their metadata
 - GetMetadataOfType, HasMetadataOfType and AddMetadataOfType work on any asset
@@ -10,6 +10,11 @@
 - Fixed a failed build leaving metadata copies in Assets/Resources, where the editor found them as extra metadata
 - DisallowMultipleCustomAssetMetadata counts subtypes, as documented; RestrictMetadataAssetTypes accepts subclasses of the listed types
 - The metadata menu follows the order given to AddMetadataMenu, and leaves out abstract metadata classes
+- Builds only include the metadata of assets they include anyway; every asset with metadata used to be pulled into every build
+- Adding and removing metadata can be undone
+- The remove menu opens on a context click instead of reading a private Unity field
+- Requires Unity 6000.3 or newer, which the package already needed since 1.2.3
+- The sample's AudioClip-only metadata is now for animation clips, as audio clips cannot hold metadata
 
 ## 1.2.3 (2026-10-26)
 - Metadata kept as a hidden sub-asset is found, in the editor and in builds
