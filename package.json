@@ -3,12 +3,23 @@
     "displayName": "Custom Asset Metadata",
     "version": "1.2.2",
     "unity": "2020.3",
-    "description": "Adds the ability to store meta data on Assets",
+    "description": "Store your own data with assets: metadata classes you write (ScriptableObjects deriving from CustomAssetMetadata) are kept with an asset, edited in its inspector, and found again from the asset at runtime as well as in the editor.\n\nMaterials are supported for now.",
     "license": "MIT",
     "author": {
-      "name": "Sander van Rossen",
-      "email": "sander.vanrossen at gmail.com"
+        "name": "Sander van Rossen",
+        "email": "sander.vanrossen at gmail.com",
+        "url": "https://github.com/RadicalCSG"
     },
+    "documentationUrl": "https://github.com/RadicalCSG/CustomAssetMetadata#readme",
+    "changelogUrl": "https://github.com/RadicalCSG/CustomAssetMetadata/blob/main/CHANGELOG.md",
+    "licensesUrl": "https://github.com/RadicalCSG/CustomAssetMetadata/blob/main/LICENSE.md",
+    "keywords": [
+        "metadata",
+        "asset",
+        "material",
+        "editor",
+        "inspector"
+    ],
     "samples": [
         {
             "displayName": "Simple example",
