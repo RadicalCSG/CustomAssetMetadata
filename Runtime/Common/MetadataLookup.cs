@@ -237,11 +237,9 @@ internal static class MetadataLookup
 			var lookupAsset = Resources.Load(assetpath) as MetadataLookupAsset;
 			// Keep the resource and its metadata loaded.
 			s_RuntimeLookupAsset = lookupAsset;
+            // Builds without metadata do not include a lookup
             if (lookupAsset == null)
-			{
-				Debug.LogError($"Failed to load {assetpath}");
                 return;
-			}
 
 			foreach (var metadata in lookupAsset.allMetadata)
 			{

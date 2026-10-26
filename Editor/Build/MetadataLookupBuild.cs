@@ -82,6 +82,21 @@ public class MetadataLookupPreprocessBuild : IPreprocessBuildWithReport
     {
         RemoveBuildResources();
 
+        List<CustomAssetMetadata> allMetadata;
+        try
+        {
+            var builtAssets = BuiltAssetPaths(BuildScenes ?? EnabledBuildSettingsScenes());
+            allMetadata = FindMetadata(MetadataPaths().Where(builtAssets.Contains));
+        }
+        finally
+        {
+            BuildScenes = null;
+        }
+
+        // Without metadata there is nothing to look up; a player treats a missing lookup as empty
+        if (allMetadata.Count == 0)
+            return;
+
         HadResourcesDirectory = System.IO.Directory.Exists(kResourcesPath);
         // Survives domain reloads, unlike a static
         SessionState.SetBool(kCreatedResourcesKey, !HadResourcesDirectory);
@@ -90,27 +105,17 @@ public class MetadataLookupPreprocessBuild : IPreprocessBuildWithReport
         EditorApplication.delayCall -= RemoveBuildResources;
         EditorApplication.delayCall += RemoveBuildResources;
 
-        AssetDatabase.StartAssetEditing();
-        try
+        using (new AssetDatabase.AssetEditingScope())
         {
             System.IO.Directory.CreateDirectory(kBasePath);
-            var list = ScriptableObject.CreateInstance<MetadataLookupAsset>();
-
-            var builtAssets = BuiltAssetPaths(BuildScenes ?? EnabledBuildSettingsScenes());
-            var allMetadata = new List<CustomAssetMetadata>();
-            allMetadata.AddRange(FindMetadata(MetadataPaths().Where(builtAssets.Contains)));
 
             int index = 0;
             for (int i = 0; i < allMetadata.Count; i++)
                 allMetadata[i] = CloneCustomAssetMetadata(allMetadata[i], kBasePath, ref index);
 
+            var list = ScriptableObject.CreateInstance<MetadataLookupAsset>();
             list.allMetadata = allMetadata.ToArray();
             AssetDatabase.CreateAsset(list, $"{kBasePath}/{MetadataLookup.kAssetName}.asset");
-        }
-        finally
-        {
-            AssetDatabase.StopAssetEditing();
-            BuildScenes = null;
         }
     }
 

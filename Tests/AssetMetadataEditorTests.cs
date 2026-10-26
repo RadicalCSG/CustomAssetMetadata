@@ -284,6 +284,25 @@ namespace AssetMetadata.Tests
 		}
 
 		[Test]
+		public void Build_WithoutMetadataWritesNothing()
+		{
+			CreateMaterial("NotBuilt").AddMetadataOfType<ReloadableTestMetadata>();
+			var hadResources = AssetDatabase.IsValidFolder("Assets/Resources");
+			try
+			{
+				MetadataLookupPreprocessBuild.BuildScenes = new string[0];
+				new MetadataLookupPreprocessBuild().OnPreprocessBuild(null);
+				Assert.That(Directory.Exists(kBuildResourcesPath), Is.False);
+				Assert.That(AssetDatabase.IsValidFolder("Assets/Resources"), Is.EqualTo(hadResources));
+				Assert.That(MetadataLookupPreprocessBuild.BuildScenes, Is.Null);
+			}
+			finally
+			{
+				MetadataLookupPreprocessBuild.RemoveBuildResources();
+			}
+		}
+
+		[Test]
 		public void BuiltAssetPaths_FollowsDependencies()
 		{
 			var material = CreateMaterial("Referenced");
