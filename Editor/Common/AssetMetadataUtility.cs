@@ -186,7 +186,7 @@ public static class AssetMetadataUtility
             Undo.RegisterCreatedObjectUndo(assetMetadata, "Add " + GetDisplayName(type));
             undoAssetPaths.Add(assetPath);
             SetMetadataLabel(assetPath, true);
-            SaveAndImport(assetPath);
+            Save(assetPath);
             // OnEnable runs before the reference is assigned, so register explicitly.
             MetadataLookup.Register(target, assetMetadata);
             return assetMetadata;
@@ -246,10 +246,10 @@ public static class AssetMetadataUtility
         Undo.DestroyObjectImmediate(metadata);
         if (!AnyMetadataAtPath(assetPath))
             SetMetadataLabel(assetPath, false);
-        SaveAndImport(assetPath);
+        Save(assetPath);
     }
 
-    // Assets whose metadata was added or removed with undo, and need saving again after an undo or redo
+    // Assets whose metadata was added or removed with undo; an undo or redo leaves them dirty, like any other undone edit
     static readonly HashSet<string> undoAssetPaths = new();
 
     [InitializeOnLoadMethod]
@@ -266,24 +266,23 @@ public static class AssetMetadataUtility
 
         foreach (var assetPath in undoAssetPaths)
         {
-            if (AssetDatabase.LoadMainAssetAtPath(assetPath) == null)
+            var mainAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+            if (mainAsset == null)
                 continue;
             SetMetadataLabel(assetPath, AnyMetadataAtPath(assetPath));
-            SaveAndImport(assetPath);
+            EditorUtility.SetDirty(mainAsset);
         }
         EditorHeaderHook.Reset();
     }
 
-    static void SaveAndImport(string assetPath)
+    static void Save(string assetPath)
     {
         var mainAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
-        if (mainAsset != null)
-        {
-            // Adding or removing a sub-asset does not dirty the main asset
-            EditorUtility.SetDirty(mainAsset);
-            AssetDatabase.SaveAssetIfDirty(mainAsset);
-        }
-        AssetDatabase.ImportAsset(assetPath);
+        if (mainAsset == null)
+            return;
+        // Adding or removing a sub-asset does not dirty the main asset
+        EditorUtility.SetDirty(mainAsset);
+        AssetDatabase.SaveAssetIfDirty(mainAsset);
     }
 
     static bool AnyMetadataAtPath(string assetPath)

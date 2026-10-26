@@ -143,12 +143,15 @@ namespace AssetMetadata.Tests
 			Undo.IncrementCurrentGroup();
 			material.AddMetadataOfType<ReloadableTestMetadata>();
 
+			// Like any undone edit, the asset is written on the next save
 			Undo.PerformUndo();
+			AssetDatabase.SaveAssets();
 			Assert.That(material.HasMetadataOfType<ReloadableTestMetadata>(), Is.False);
 			Assert.That(OnDisk(path), Is.False);
 			Assert.That(Labelled(path), Is.False);
 
 			Undo.PerformRedo();
+			AssetDatabase.SaveAssets();
 			Assert.That(material.HasMetadataOfType<ReloadableTestMetadata>(), Is.True);
 			Assert.That(OnDisk(path), Is.True);
 			Assert.That(Labelled(path), Is.True);
@@ -166,6 +169,7 @@ namespace AssetMetadata.Tests
 			AssetMetadataUtility.Destroy(metadata);
 
 			Undo.PerformUndo();
+			AssetDatabase.SaveAssets();
 			var restored = material.GetMetadataOfType<ReloadableTestMetadata>();
 			Assert.That(restored, Is.Not.Null);
 			Assert.That(restored.value, Is.EqualTo(7));
@@ -173,9 +177,44 @@ namespace AssetMetadata.Tests
 			Assert.That(Labelled(path), Is.True);
 
 			Undo.PerformRedo();
+			AssetDatabase.SaveAssets();
 			Assert.That(material.HasMetadataOfType<ReloadableTestMetadata>(), Is.False);
 			Assert.That(OnDisk(path), Is.False);
 			Assert.That(Labelled(path), Is.False);
+		}
+
+		static int[] Values(Material material)
+		{
+			var found = new List<CustomAssetMetadata>();
+			AssetMetadataUtility.GetAll(material, found);
+			return found.OfType<ReloadableTestMetadata>().Select(m => m.value).OrderBy(v => v).ToArray();
+		}
+
+		[Test]
+		public void UndoAfterSeveralAddsAndARemove_StepsBackOneOperationAtATime()
+		{
+			var material = CreateMaterial();
+			Undo.ClearAll();
+			var added = new List<ReloadableTestMetadata>();
+			for (int i = 1; i <= 3; i++)
+			{
+				Undo.IncrementCurrentGroup();
+				var metadata = material.AddMetadataOfType<ReloadableTestMetadata>();
+				metadata.value = i;
+				added.Add(metadata);
+			}
+			Undo.IncrementCurrentGroup();
+			AssetMetadataUtility.Destroy(added[2]);
+			Assert.That(Values(material), Is.EqualTo(new[] { 1, 2 }));
+
+			Undo.PerformUndo();
+			Assert.That(Values(material), Is.EqualTo(new[] { 1, 2, 3 }), "undoing the remove");
+
+			Undo.PerformUndo();
+			Assert.That(Values(material), Is.EqualTo(new[] { 1, 2 }), "undoing the third add");
+
+			Undo.PerformUndo();
+			Assert.That(Values(material), Is.EqualTo(new[] { 1 }), "undoing the second add");
 		}
 
 		// --- attributes ------------------------------------------------------------------------
